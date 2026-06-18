@@ -12,10 +12,12 @@
 members = [
     "system/atlas",
     "system/executor",
+    "system/health_primitive",
     "system/liaison",
     "system/pilot",
     "system/scribe",
     "system/soma",
+    "system/vitals",
     "tools/rbnx",
     "tools/codegen",
 ]
