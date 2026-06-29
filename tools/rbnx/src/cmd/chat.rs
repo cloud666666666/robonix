@@ -314,6 +314,33 @@ fn save_chat_config(cfg: &ChatConfig) -> Result<()> {
     Ok(())
 }
 
+/// Walk up from the current directory looking for `rbnx-boot/state.json`
+/// (written by `rbnx boot`) and return its `atlas_endpoint` if found.
+fn discover_atlas_from_boot_state() -> Option<String> {
+    let mut dir = std::env::current_dir().ok()?;
+    loop {
+        let state_path = dir.join("rbnx-boot").join("state.json");
+        if state_path.exists() {
+            if let Ok(raw) = std::fs::read_to_string(&state_path) {
+                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw) {
+                    if let Some(ep) = parsed.get("atlas_endpoint").and_then(|v| v.as_str()) {
+                        info!(
+                            "auto-discovered atlas endpoint '{}' from {}",
+                            ep,
+                            state_path.display()
+                        );
+                        return Some(ep.to_string());
+                    }
+                }
+            }
+        }
+        if !dir.pop() {
+            break;
+        }
+    }
+    None
+}
+
 pub async fn execute(server: &str) -> Result<()> {
     let atlas_endpoint = if server.starts_with("http") {
         server.to_string()
