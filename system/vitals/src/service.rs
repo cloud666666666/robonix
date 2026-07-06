@@ -70,7 +70,7 @@ impl VitalsServiceImpl {
         for comp in &snapshot.components {
             let prev_h = state.prev_health.get(&comp.name).copied().unwrap_or(0);
             if comp.health != prev_h {
-                log::info!(
+                robonix_scribe::info!(
                     "[vitals] {} health: {} → {} (value={}, threshold={})",
                     comp.name,
                     health_label(prev_h),
@@ -82,7 +82,7 @@ impl VitalsServiceImpl {
                 if comp.health == crate::normalize::HEALTH_WARN
                     || comp.health == crate::normalize::HEALTH_ERROR
                 {
-                    log::warn!("[vitals] ALERT: {} — {}", comp.name, comp.detail);
+                    robonix_scribe::warn!("[vitals] ALERT: {} — {}", comp.name, comp.detail);
                 }
                 changed = true;
             }
@@ -110,7 +110,7 @@ impl VitalsServiceImpl {
                 .as_ref()
                 .map(|p| format!("{:.1}V", p.voltage))
                 .unwrap_or_else(|| "?V".to_string());
-            log::info!("[vitals] {} | {}", voltage_str, summary.join(" "));
+            robonix_scribe::info!("[vitals] {} | {}", voltage_str, summary.join(" "));
             let _ = state.broadcast_tx.send(snapshot);
         }
     }
@@ -179,7 +179,9 @@ impl RobonixServiceVitalsStream for VitalsServiceImpl {
                         }
                     }
                     Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
-                        log::warn!("[vitals] StreamVitals subscriber lagged by {n} messages");
+                        robonix_scribe::warn!(
+                            "[vitals] StreamVitals subscriber lagged by {n} messages"
+                        );
                     }
                     Err(tokio::sync::broadcast::error::RecvError::Closed) => {
                         break;

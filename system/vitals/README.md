@@ -40,14 +40,14 @@ vitals only sees unified fields.
 
 ```bash
 # Terminal 1 — start the health primitive
-robonix-health-primitive --log info
+robonix-health-primitive
 # Or
-cargo run --release -p robonix-health-primitive -- --log info
+cargo run --release -p robonix-health-primitive
 
 # Terminal 2 — start vitals (discovers the primitive via Atlas)
-robonix-vitals --log info
+robonix-vitals
 # Or
-cargo run --release -p robonix-vitals -- --log info
+cargo run --release -p robonix-vitals
 ```
 
 Typical output:
@@ -97,7 +97,9 @@ robonix-vitals [FLAGS] [OPTIONS]
 | `--collect-interval-ms` | `ROBONIX_VITALS_COLLECT_INTERVAL_MS` | `1000` | Sensor polling interval (ms) |
 | `--thresholds-path` | `ROBONIX_VITALS_THRESHOLDS_PATH` | `<crate>/thresholds/jetson_agx_orin.yaml` | YAML threshold file |
 | `--config` | `ROBONIX_CONFIG_PATH` | — | Optional YAML config file (CLI/env override) |
-| `--log` | `RUST_LOG` | `robonix_vitals=info` | env\_logger filter |
+
+Logging goes through `robonix-scribe`; set `SCRIBE_CONSOLE_LEVEL` /
+`SCRIBE_FILE_LEVEL` (e.g. `debug`) to change verbosity.
 
 ## Threshold file format
 

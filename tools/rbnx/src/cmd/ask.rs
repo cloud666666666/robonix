@@ -35,8 +35,42 @@ const EVT_FINAL_TEXT: u32 = 4;
 const STATE_FAILED: u32 = 2;
 const CONSUMER_ID: &str = "rbnx-cli/ask";
 
+/// Walk up from the current directory looking for `rbnx-boot/state.json`
+/// (written by `rbnx boot`) and return its `atlas_endpoint` if found.
+fn discover_atlas_from_boot_state() -> Option<String> {
+    let mut dir = std::env::current_dir().ok()?;
+    loop {
+        let state_path = dir.join("rbnx-boot").join("state.json");
+        if state_path.exists()
+            && let Ok(raw) = std::fs::read_to_string(&state_path)
+            && let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw)
+            && let Some(ep) = parsed.get("atlas_endpoint").and_then(|v| v.as_str())
+        {
+            eprintln!(
+                "[ask] auto-discovered atlas endpoint '{}' from {}",
+                ep,
+                state_path.display()
+            );
+            return Some(ep.to_string());
+        }
+        if !dir.pop() {
+            break;
+        }
+    }
+    None
+}
+
 pub async fn execute(server: &str, prompt: &str, json: bool) -> Result<()> {
-    let mut atlas = AtlasClient::connect(server)
+    // When the user hasn't explicitly passed --server or set ROBONIX_ATLAS,
+    // clap fills in the hardcoded DEFAULT_ENDPOINT. Try to auto-discover
+    // from a running `rbnx boot` state file first.
+    let server = if server == crate::cmd::DEFAULT_ENDPOINT {
+        discover_atlas_from_boot_state().unwrap_or_else(|| server.to_string())
+    } else {
+        server.to_string()
+    };
+
+    let mut atlas = AtlasClient::connect(&server)
         .await
         .with_context(|| format!("connect to atlas at '{server}'"))?;
     let (channel_id, pilot_cap_id, channel) =

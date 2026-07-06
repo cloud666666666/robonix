@@ -53,11 +53,6 @@ pub struct Args {
     /// Optional YAML config file (rbnx writes this; CLI/env still override).
     #[arg(long, env = "ROBONIX_CONFIG_PATH")]
     pub config: Option<PathBuf>,
-
-    /// Log filter (env_logger syntax; e.g. `info`, `robonix_vitals=debug`).
-    /// Default: `robonix_vitals=info`. Falls back to `RUST_LOG` if unset.
-    #[arg(long)]
-    pub log: Option<String>,
 }
 
 #[derive(Default, Deserialize)]

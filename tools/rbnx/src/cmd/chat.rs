@@ -320,19 +320,17 @@ fn discover_atlas_from_boot_state() -> Option<String> {
     let mut dir = std::env::current_dir().ok()?;
     loop {
         let state_path = dir.join("rbnx-boot").join("state.json");
-        if state_path.exists() {
-            if let Ok(raw) = std::fs::read_to_string(&state_path) {
-                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw) {
-                    if let Some(ep) = parsed.get("atlas_endpoint").and_then(|v| v.as_str()) {
-                        info!(
-                            "auto-discovered atlas endpoint '{}' from {}",
-                            ep,
-                            state_path.display()
-                        );
-                        return Some(ep.to_string());
-                    }
-                }
-            }
+        if state_path.exists()
+            && let Ok(raw) = std::fs::read_to_string(&state_path)
+            && let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw)
+            && let Some(ep) = parsed.get("atlas_endpoint").and_then(|v| v.as_str())
+        {
+            info!(
+                "auto-discovered atlas endpoint '{}' from {}",
+                ep,
+                state_path.display()
+            );
+            return Some(ep.to_string());
         }
         if !dir.pop() {
             break;
@@ -342,6 +340,15 @@ fn discover_atlas_from_boot_state() -> Option<String> {
 }
 
 pub async fn execute(server: &str) -> Result<()> {
+    // When the user hasn't explicitly passed --server or set ROBONIX_ATLAS,
+    // clap fills in the hardcoded DEFAULT_ENDPOINT. Try to auto-discover
+    // from a running `rbnx boot` state file first.
+    let server = if server == crate::cmd::DEFAULT_ENDPOINT {
+        discover_atlas_from_boot_state().unwrap_or_else(|| server.to_string())
+    } else {
+        server.to_string()
+    };
+
     let atlas_endpoint = if server.starts_with("http") {
         server.to_string()
     } else {

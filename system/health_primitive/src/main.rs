@@ -16,23 +16,20 @@ mod service;
 use anyhow::{Context, Result};
 use clap::Parser;
 use config::{Args, HealthConfig, PROVIDER_NAMESPACE};
-use log::info;
 use pb::contracts::robonix_primitive_health_state_server::RobonixPrimitiveHealthStateServer;
 use pb::contracts::robonix_primitive_health_stream_server::RobonixPrimitiveHealthStreamServer;
 use robonix_atlas::client::{self as atlas_client, AtlasClient};
 use robonix_atlas::pb as atlas_pb;
+use robonix_scribe::{error, info, warn};
 use service::HealthPrimitiveService;
 use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let parsed = Args::parse();
-    let log_filter = parsed
-        .log
-        .clone()
-        .or_else(|| std::env::var("RUST_LOG").ok())
-        .unwrap_or_else(|| "robonix_health_primitive=info".to_string());
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(log_filter)).init();
+    // scribe tag for this process; level comes from SCRIBE_CONSOLE_LEVEL /
+    // SCRIBE_FILE_LEVEL env (see robonix-scribe), consistent with other crates.
+    robonix_scribe::init("health-primitive");
 
     let cfg = HealthConfig::resolve(parsed)?;
 
@@ -94,7 +91,7 @@ async fn main() -> Result<()> {
         .set_lifecycle_state(&cfg.id, atlas_pb::LifecycleState::StateActive, "")
         .await
     {
-        log::warn!("SetLifecycleState(ACTIVE) failed: {e:#}");
+        warn!("SetLifecycleState(ACTIVE) failed: {e:#}");
     }
 
     // Heartbeat.
@@ -107,7 +104,7 @@ async fn main() -> Result<()> {
             loop {
                 tick.tick().await;
                 if let Err(e) = hb.heartbeat(&provider_id).await {
-                    log::warn!("heartbeat failed: {e:#}");
+                    warn!("heartbeat failed: {e:#}");
                 }
             }
         });
@@ -123,7 +120,7 @@ async fn main() -> Result<()> {
             let collector = match service::Collector::new() {
                 Ok(c) => c,
                 Err(e) => {
-                    log::error!("collector init failed: {e:#}");
+                    error!("collector init failed: {e:#}");
                     return;
                 }
             };

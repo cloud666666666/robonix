@@ -39,9 +39,6 @@ pub struct Args {
 
     #[arg(long, env = "ROBONIX_CONFIG_PATH")]
     pub config: Option<PathBuf>,
-
-    #[arg(long)]
-    pub log: Option<String>,
 }
 
 #[derive(Default, Deserialize)]

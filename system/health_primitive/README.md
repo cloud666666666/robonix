@@ -14,9 +14,9 @@ paths or protocols.
 ## Quick start
 
 ```bash
-robonix-health-primitive --log info
+robonix-health-primitive
 # Or
-cargo run --release -p robonix-health-primitive -- --log info
+cargo run --release -p robonix-health-primitive
 ```
 
 ## Data sources
@@ -38,7 +38,9 @@ so they match vitals threshold rule names.
 | `--listen` | `ROBONIX_HEALTH_LISTEN` | `127.0.0.1:50092` | gRPC listen address |
 | `--id` | `ROBONIX_HEALTH_PROVIDER_ID` | `health_primitive` | Provider id |
 | `--collect-interval-ms` | `ROBONIX_HEALTH_COLLECT_INTERVAL_MS` | `1000` | Poll interval |
-| `--log` | `RUST_LOG` | `robonix_health_primitive=info` | Log filter |
+
+Logging goes through `robonix-scribe`; set `SCRIBE_CONSOLE_LEVEL` /
+`SCRIBE_FILE_LEVEL` (e.g. `debug`) to change verbosity.
 
 ## Source layout
 

@@ -21,11 +21,11 @@ mod service;
 use anyhow::{Context, Result};
 use clap::Parser;
 use config::{Args, VITALS_NAMESPACE, VitalsConfig};
-use log::info;
 use pb::contracts::robonix_service_vitals_get_server::RobonixServiceVitalsGetServer;
 use pb::contracts::robonix_service_vitals_stream_server::RobonixServiceVitalsStreamServer;
 use robonix_atlas::client::{self as atlas_client, AtlasClient};
 use robonix_atlas::pb as atlas_pb;
+use robonix_scribe::{info, warn};
 use service::VitalsServiceImpl;
 use std::time::Duration;
 use std::time::Instant;
@@ -33,12 +33,9 @@ use std::time::Instant;
 #[tokio::main]
 async fn main() -> Result<()> {
     let parsed = Args::parse();
-    let log_filter = parsed
-        .log
-        .clone()
-        .or_else(|| std::env::var("RUST_LOG").ok())
-        .unwrap_or_else(|| "robonix_vitals=info".to_string());
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(log_filter)).init();
+    // scribe tag for this process; level comes from SCRIBE_CONSOLE_LEVEL /
+    // SCRIBE_FILE_LEVEL env (see robonix-scribe), consistent with other crates.
+    robonix_scribe::init("vitals");
 
     let cfg = VitalsConfig::resolve(parsed)?;
 
@@ -101,7 +98,7 @@ async fn main() -> Result<()> {
         .set_lifecycle_state(&cfg.id, atlas_pb::LifecycleState::StateActive, "")
         .await
     {
-        log::warn!("SetLifecycleState(ACTIVE) failed: {e:#}");
+        warn!("SetLifecycleState(ACTIVE) failed: {e:#}");
     }
 
     // Heartbeat every 20s to prevent Atlas eviction (90s timeout).
@@ -114,7 +111,7 @@ async fn main() -> Result<()> {
             loop {
                 tick.tick().await;
                 if let Err(e) = hb.heartbeat(&provider_id).await {
-                    log::warn!("heartbeat failed: {e:#}");
+                    warn!("heartbeat failed: {e:#}");
                 }
             }
         });
@@ -135,7 +132,7 @@ async fn main() -> Result<()> {
                 r
             }
             Err(e) => {
-                log::warn!(
+                warn!(
                     "failed to parse threshold file '{}': {e:#}",
                     cfg.thresholds_path.display()
                 );
@@ -143,7 +140,7 @@ async fn main() -> Result<()> {
             }
         },
         Err(e) => {
-            log::warn!(
+            warn!(
                 "threshold file '{}' not readable: {e:#} — using basic collection",
                 cfg.thresholds_path.display()
             );
@@ -177,7 +174,7 @@ async fn main() -> Result<()> {
                 let (power, readings) = match collector.collect().await {
                     Ok(v) => v,
                     Err(e) => {
-                        log::warn!("[vitals] collect failed: {e:#}");
+                        warn!("[vitals] collect failed: {e:#}");
                         continue;
                     }
                 };
